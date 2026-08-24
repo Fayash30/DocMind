@@ -13,8 +13,8 @@ class VectorStore:
 
     def add_chunks(self, chunks, embeddings):
         ids = [
-            f"chunk_{i}"
-            for i in range(len(chunks))
+            chunk["id"]
+            for chunk in chunks
         ]
 
         documents = [
@@ -41,3 +41,13 @@ class VectorStore:
         )
 
         return results
+
+    def document_exists(self, document_id):
+        results = self.collection.get(
+            where={
+                "document_id": document_id
+            },
+            limit=1
+        )
+
+        return len(results["ids"]) > 0

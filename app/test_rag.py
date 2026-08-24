@@ -1,5 +1,6 @@
 from ingestion.pdf_loader import load_pdf
 from ingestion.chunker import chunk_pages
+from ingestion.document import generate_document_id
 from embeddings.embedder import Embedder
 from vectorstore.chroma_store import VectorStore
 from generation.llm import LLM
@@ -9,58 +10,78 @@ from generation.prompt import build_prompt
 pdf_path = "data/docmind_rag_survey.pdf"
 
 
-# 1. Load PDF
-pages = load_pdf(pdf_path)
+# 1. Generate document ID
+document_id = generate_document_id(pdf_path)
 
-print(f"Loaded {len(pages)} pages")
-
-
-# 2. Chunk
-chunks = chunk_pages(pages)
-
-print(f"Created {len(chunks)} chunks")
+print("Document ID:", document_id)
 
 
-# 3. Create embeddings
-embedder = Embedder()
-
-chunk_texts = [
-    chunk["text"]
-    for chunk in chunks
-]
-
-chunk_embeddings = embedder.embed(chunk_texts)
-
-print("Created embeddings")
-
-
-# 4. Store in Chroma
+# 2. Connect to vector store
 store = VectorStore()
 
-store.add_chunks(
-    chunks,
-    chunk_embeddings
+
+# 3. Check whether document already exists
+if store.document_exists(document_id):
+    print("Document already indexed. Skipping ingestion.")
+
+else:
+    # 4. Load PDF
+    pages = load_pdf(pdf_path)
+
+    print(f"Loaded {len(pages)} pages")
+
+    # 5. Chunk
+    chunks = chunk_pages(
+        pages,
+        document_id
+    )
+
+    print(f"Created {len(chunks)} chunks")
+
+    # 6. Generate embeddings
+    embedder = Embedder()
+
+    chunk_texts = [
+        chunk["text"]
+        for chunk in chunks
+    ]
+
+    chunk_embeddings = embedder.embed(chunk_texts)
+
+    print("Created embeddings")
+
+    # 7. Store
+    store.add_chunks(
+        chunks,
+        chunk_embeddings
+    )
+
+    print("Stored chunks in vector database")
+
+
+# 8. Create embedder for the user query
+embedder = Embedder()
+
+
+# 9. Ask a question
+question = (
+    "What are the main components of a "
+    "Retrieval-Augmented Generation system?"
 )
 
-print("Stored chunks in vector database")
 
-
-# 5. Ask a question
-question = "What are the main components of a Retrieval-Augmented Generation system?"
-
-
-# 6. Embed question
+# 10. Embed the question
 query_embedding = embedder.embed([question])[0]
 
 
-# 7. Retrieve relevant chunks
+# 11. Retrieve relevant chunks
 results = store.search(
     query_embedding,
     top_k=5
 )
 
 
-# 8. Convert Chroma results into our chunk format
+# 12. Convert Chroma results into our chunk format
 retrieved_chunks = []
 
 for i, text in enumerate(results["documents"][0]):
@@ -70,20 +91,20 @@ for i, text in enumerate(results["documents"][0]):
     })
 
 
-# 9. Build grounded prompt
+# 13. Build grounded prompt
 prompt = build_prompt(
     question,
     retrieved_chunks
 )
 
 
-# 10. Ask Gemini
+# 14. Ask Gemini
 llm = LLM()
 
 answer = llm.generate(prompt)
 
 
-# 11. Display answer
+# 15. Display answer
 print("\n==============================")
 print("           DOCMIND")
 print("==============================")
