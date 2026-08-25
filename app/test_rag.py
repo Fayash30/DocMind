@@ -5,6 +5,7 @@ from embeddings.embedder import Embedder
 from vectorstore.chroma_store import VectorStore
 from generation.llm import LLM
 from generation.prompt import build_prompt
+from retrieval.reranker import Reranker
 
 
 pdf_path = "data/docmind_rag_survey.pdf"
@@ -64,11 +65,13 @@ embedder = Embedder()
 
 
 # 9. Ask a question
-question = (
-    "What are the main components of a "
-    "Retrieval-Augmented Generation system?"
-)
+# question = (
+#     "What are the main components of a "
+#     "Retrieval-Augmented Generation system?"
+# )
 # question = "How do I make chicken biryani?"
+
+question = "What are some limitations of Retrieval-Augmented Generation?"
 
 # 10. Embed the question
 query_embedding = embedder.embed([question])[0]
@@ -103,6 +106,29 @@ for i, text in enumerate(results["documents"][0]):
     })
 
 
+reranker = Reranker()
+
+reranked_results = reranker.rerank(
+    question,
+    retrieved_chunks,
+    top_k=3
+)
+
+retrieved_chunks = [
+    result["chunk"]
+    for result in reranked_results
+]
+
+
+print("\nRERANKED RESULTS:")
+
+for result in reranked_results:
+    print(
+        f"score={result['score']:.4f} "
+        f"| page={result['chunk']['metadata']['page']}"
+    )
+
+    
 # 13. Build grounded prompt
 prompt = build_prompt(
     question,
