@@ -34,13 +34,35 @@ class VectorStore:
             metadatas=metadatas
         )
 
-    def search(self, query_embedding, top_k=3):
+    def search(self, query_embedding, top_k=3, max_distance=1.0):
         results = self.collection.query(
             query_embeddings=[query_embedding.tolist()],
-            n_results=top_k
+            n_results=top_k,
+            include=[
+                "documents",
+                "metadatas",
+                "distances"
+            ]
         )
 
-        return results
+        filtered_results = {
+            "documents": [[]],
+            "metadatas": [[]],
+            "distances": [[]]
+        }
+
+        for document, metadata, distance in zip(
+            results["documents"][0],
+            results["metadatas"][0],
+            results["distances"][0]
+        ):
+            if distance <= max_distance:
+                filtered_results["documents"][0].append(document)
+                filtered_results["metadatas"][0].append(metadata)
+                filtered_results["distances"][0].append(distance)
+
+        return filtered_results
+
 
     def document_exists(self, document_id):
         results = self.collection.get(

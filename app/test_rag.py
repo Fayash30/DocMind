@@ -68,7 +68,7 @@ question = (
     "What are the main components of a "
     "Retrieval-Augmented Generation system?"
 )
-
+# question = "How do I make chicken biryani?"
 
 # 10. Embed the question
 query_embedding = embedder.embed([question])[0]
@@ -80,6 +80,18 @@ results = store.search(
     top_k=5
 )
 
+if not results["documents"][0]:
+    print("\nDOCMIND:")
+    print("I couldn't find sufficient evidence in the uploaded documents.")
+    exit()
+
+print("\nRETRIEVAL RESULTS:")
+
+for i, distance in enumerate(results["distances"][0]):
+    print(
+        f"{i + 1}. distance={distance:.4f} "
+        f"| page={results['metadatas'][0][i]['page']}"
+    )
 
 # 12. Convert Chroma results into our chunk format
 retrieved_chunks = []
